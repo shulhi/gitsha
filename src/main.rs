@@ -5,6 +5,7 @@ use clap::{App, Arg};
 
 extern crate github_rs;
 extern crate serde_json;
+use github_rs::StatusCode;
 use github_rs::client::{Executor, Github};
 use serde_json::Value;
 
@@ -33,36 +34,47 @@ fn main() {
         .get_matches();
 
     let url = matches.value_of("REPO").unwrap();
+    let branch = matches.value_of("branch").unwrap_or("master");
 
     if let Some((owner, repo)) = parse_owner_repo(url) {
         let client = Github::new("4929d085b5afb5ee79781643a3cd4316e5da2b4e").unwrap();
 
-        let commit = get_commit_information(&client, owner, repo);
+        let commit = get_commit_information(&client, owner, repo, branch);
 
         match commit {
-            Some(c) => println!("{}", c.sha),
-            None => println!("Nothing"),
+            Ok(c) => println!("{}", c.sha),
+            Err(err) => println!("{}", err),
         }
     }
 }
 
-fn get_commit_information(client: &Github, owner: &str, repo_name: &str) -> Option<CommitInfo> {
+fn get_commit_information(
+    client: &Github,
+    owner: &str,
+    repo_name: &str,
+    branch_name: &str,
+) -> Result<CommitInfo, &'static str> {
     let response = client
         .get()
         .repos()
         .owner(owner)
         .repo(repo_name)
         .branches()
-        .name("master")
+        .name(branch_name)
         .execute::<Value>();
 
     match response {
-        Ok((_, _, json)) => json.and_then(|json| parse_repo_info(&json)),
-        Err(e) => None,
+        Ok((_, status, json)) => match status {
+            StatusCode::Ok => json.ok_or("JSON is missing")
+                .and_then(|v| parse_repo_info(&v)),
+            StatusCode::NotFound => Err("Repo or branch is not found"),
+            _ => Err("Unknown error"),
+        },
+        Err(e) => Err("Unknown error"),
     }
 }
 
-fn parse_repo_info(json: &Value) -> Option<CommitInfo> {
+fn parse_repo_info(json: &Value) -> Result<CommitInfo, &'static str> {
     let name = match json["name"] {
         Value::String(ref v) => Ok(v.clone()),
         _ => Err("Name not found"),
@@ -76,9 +88,9 @@ fn parse_repo_info(json: &Value) -> Option<CommitInfo> {
     match (name, sha) {
         (Ok(name), Ok(sha)) => {
             let repo_info = CommitInfo { name, sha };
-            Some(repo_info)
+            Ok(repo_info)
         }
-        _ => None,
+        _ => Err("Parse error"),
     }
 }
 
