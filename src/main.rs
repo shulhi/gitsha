@@ -1,7 +1,7 @@
 #![feature(slice_patterns)]
 
 extern crate clap;
-use clap::{App, Arg};
+use clap::{App, Arg, SubCommand};
 
 extern crate github_rs;
 extern crate serde_json;
@@ -18,33 +18,53 @@ fn main() {
     let matches = App::new("Git commit retriever")
         .version("1.0")
         .author("Shulhi Sapli <shulhi@gmail.com>")
-        .arg(
-            Arg::with_name("REPO")
-                .help("Use the following format <owner>/<repo>")
-                .required(true)
-                .index(1),
+        .subcommand(
+            SubCommand::with_name("get")
+                .about("Get SHA")
+                .arg(
+                    Arg::with_name("REPO")
+                        .help("Use the following format <owner>/<repo>")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("branch")
+                        .help("default to master")
+                        .short("b")
+                        .long("branch")
+                        .takes_value(true),
+                ),
         )
-        .arg(
-            Arg::with_name("branch")
-                .help("default to master")
-                .short("b")
-                .long("branch")
-                .takes_value(true),
+        .subcommand(
+            SubCommand::with_name("configure")
+                .about("Configuration")
+                .arg(
+                    Arg::with_name("token")
+                        .help("Set Github API token")
+                        .required(true)
+                        .index(1),
+                ),
         )
         .get_matches();
 
-    let url = matches.value_of("REPO").unwrap();
-    let branch = matches.value_of("branch").unwrap_or("master");
+    if let Some(matches) = matches.subcommand_matches("get") {
+        let url = matches.value_of("REPO").unwrap();
+        let branch = matches.value_of("branch").unwrap_or("master");
 
-    if let Some((owner, repo)) = parse_owner_repo(url) {
-        let client = Github::new("4929d085b5afb5ee79781643a3cd4316e5da2b4e").unwrap();
+        if let Some((owner, repo)) = parse_owner_repo(url) {
+            let client = Github::new("4929d085b5afb5ee79781643a3cd4316e5da2b4e").unwrap();
 
-        let commit = get_commit_information(&client, owner, repo, branch);
+            let commit = get_commit_information(&client, owner, repo, branch);
 
-        match commit {
-            Ok(c) => println!("{}", c.sha),
-            Err(err) => println!("{}", err),
+            match commit {
+                Ok(c) => println!("{}", c.sha),
+                Err(err) => println!("{}", err),
+            }
         }
+    }
+
+    if let Some(matches) = matches.subcommand_matches("configure") {
+        println!("CONFIGURE");
     }
 }
 
