@@ -1,5 +1,5 @@
 [package]
-name = "gitc"
+name = "gitsha"
 version = "0.1.0"
 authors = ["Shulhi Sapli <shulhi@gmail.com>"]
 

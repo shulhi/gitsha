@@ -1,5 +1,12 @@
 #![feature(slice_patterns)]
 
+use std::error::Error;
+use std::env;
+use std::fs;
+use std::fs::File;
+use std::io::Read;
+use std::io::Write;
+
 extern crate clap;
 use clap::{App, Arg, SubCommand};
 
@@ -15,7 +22,7 @@ struct CommitInfo {
 }
 
 fn main() {
-    let matches = App::new("Git commit retriever")
+    let matches = App::new("GitSHA")
         .version("1.0")
         .author("Shulhi Sapli <shulhi@gmail.com>")
         .subcommand(
@@ -39,7 +46,7 @@ fn main() {
             SubCommand::with_name("configure")
                 .about("Configuration")
                 .arg(
-                    Arg::with_name("token")
+                    Arg::with_name("TOKEN")
                         .help("Set Github API token")
                         .required(true)
                         .index(1),
@@ -52,19 +59,69 @@ fn main() {
         let branch = matches.value_of("branch").unwrap_or("master");
 
         if let Some((owner, repo)) = parse_owner_repo(url) {
-            let client = Github::new("4929d085b5afb5ee79781643a3cd4316e5da2b4e").unwrap();
+            match env::home_dir() {
+                None => println!("$HOME is not set"),
+                Some(mut path) => {
+                    path.push(".config");
+                    path.push("gitc");
+                    path.push("config");
 
-            let commit = get_commit_information(&client, owner, repo, branch);
+                    match File::open(&path) {
+                        Err(_why) => println!("Couldn't read configuration to get token."),
+                        Ok(mut file) => {
+                            let mut token = String::new();
+                            match file.read_to_string(&mut token) {
+                                Err(why) => panic!(
+                                    "Couldn't read {}: {}",
+                                    path.display(),
+                                    why.description()
+                                ),
+                                Ok(_) => {
+                                    let client = Github::new(token).unwrap();
 
-            match commit {
-                Ok(c) => println!("{}", c.sha),
-                Err(err) => println!("{}", err),
+                                    let commit =
+                                        get_commit_information(&client, owner, repo, branch);
+
+                                    match commit {
+                                        Ok(c) => println!("{}", c.sha),
+                                        Err(err) => println!("{}", err),
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
     if let Some(matches) = matches.subcommand_matches("configure") {
-        println!("CONFIGURE");
+        let token = matches.value_of("TOKEN").unwrap();
+
+        match env::home_dir() {
+            Some(mut path) => {
+                path.push(".config");
+                path.push("gitc");
+
+                fs::create_dir_all(&path).unwrap_or_else(|why| {
+                    println!("! {:?}", why.kind());
+                });
+
+                // file name
+                path.push("config");
+
+                let mut file = match File::create(&path) {
+                    Err(why) => panic!("couldn't create {}: {}", path.display(), why.description()),
+                    Ok(file) => file,
+                };
+
+                match file.write_all(token.as_bytes()) {
+                    Err(why) => panic!("Couldn't create {}: {}", path.display(), why.description()),
+                    Ok(_) => println!("Wrote config to {}", path.display()),
+                }
+            }
+            None => println!("$HOME is not set"),
+        }
     }
 }
 
@@ -90,7 +147,7 @@ fn get_commit_information(
             StatusCode::NotFound => Err("Repo or branch is not found"),
             _ => Err("Unknown error"),
         },
-        Err(e) => Err("Unknown error"),
+        Err(_) => Err("Unknown error"),
     }
 }
 

@@ -189,15 +189,6 @@ version = "0.3.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "gitc"
-version = "0.1.0"
-dependencies = [
- "clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "github-rs 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "github-rs"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -209,6 +200,15 @@ dependencies = [
  "serde 1.0.27 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "gitsha"
+version = "0.1.0"
+dependencies = [
+ "clap 2.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "github-rs 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
